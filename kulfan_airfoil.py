@@ -11,16 +11,17 @@ def get_airfoil_coord(wu, wl, yute, ylte, x=None):
     # Create x coordinate
     if x is None:  # if x_arr is not provided
         N = 161  #TODO: hard coded for now
-        x = 0.5 * (1 + np.cos(np.linspace(0, 2*np.pi, N)))  # todo: 1 TO 0 TO 1
+        # x is listed in XFoil format, i.e. counter-clockwise starting from upper trailing edge, wrapping around leading edge and ending at lower trailing edge
+        x = 0.5 * (1 + np.cos(np.linspace(0, 2*np.pi, N)))
 
     j_le = np.argmin(x)
     xu = x[:j_le]  # upper surface x-coordinates
     xl = x[j_le:]  # lower surface x-coordinates
 
-    yu = eval_shape_fcn(wu, xu, N1, N2, yute)  # Call ClassShape function to determine upper surface y-coordinates
-    yl = eval_shape_fcn(wl, xl, N1, N2, ylte)  # Call ClassShape function to determine lower surface y-coordinates
+    yu = eval_shape_fcn(wu, xu, N1, N2, yute)  # upper surface y-coordinates
+    yl = eval_shape_fcn(wl, xl, N1, N2, ylte)  # lower surface y-coordinates
 
-    y = np.concatenate([yu, yl])  # Combine upper and lower y coordinates
+    y = np.concatenate([yu, yl])
 
     return np.array([x, y]).T
 
@@ -35,8 +36,6 @@ def eval_shape_fcn(w, x, N1, N2, yte):
     :param yte: trailing edge y coordinate
     :return:
     """
-
-    # class function; taking input of N1 and N2
     C = x**N1 * (1-x)**N2
 
     n = len(w) - 1  # degree of Bernstein polynomials
@@ -57,10 +56,6 @@ def list_to_kulfan_params(var):
     assert len(var) == (2 * nw)
     return wu, wl
 
-    # dz = var[2*nw]
-    # assert len(var) == (2*nw+1)
-    # return wu, wl, dz
-
 
 def obj_fcn_airfoil_inversion(var, xy_ref):
     """
@@ -69,8 +64,6 @@ def obj_fcn_airfoil_inversion(var, xy_ref):
     :param xy_ref: n-by-2 array of reference coordinates following XFoil format (CCW)
     :return:
     """
-    # wu, wl, dz = list_to_kulfan_params(var)
-
     wu, wl = list_to_kulfan_params(var)
     yute = xy_ref[0, 1]
     ylte = xy_ref[-1, 1]

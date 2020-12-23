@@ -12,7 +12,6 @@ def get_coef(xte, yte, rle, x_ctrl, y_ctrl, d2ydx2_ctrl, th_ctrl, surface):
     # Initialize coefficients
     coef = np.zeros(6)
 
-    # 1st coefficient depends on surface (pressure or suction)
     if surface == "pressure":
         coef[0] = -sqrt(2*rle)
     elif surface == "suction":
@@ -20,7 +19,7 @@ def get_coef(xte, yte, rle, x_ctrl, y_ctrl, d2ydx2_ctrl, th_ctrl, surface):
     else:
         raise ValueError(f"surface = {surface} not recognized! It has to be either pressure or suction")
  
-    # Form system of equations
+    # form linear system
     A = np.array([
                  [xte**1.5, xte**2.5, xte**3.5, xte**4.5, xte**5.5],
                  [x_ctrl ** 1.5, x_ctrl ** 2.5, x_ctrl ** 3.5, x_ctrl ** 4.5, x_ctrl ** 5.5],
@@ -62,6 +61,7 @@ def eval_coord_from_coef(x_arr, coef):
 
 def get_coord(xte, yte, parsec_params, x_arr=None):
     """
+    assuming leading edge is at (x,y)=(0,0)
     :param xte:
     :param yte:
     :param parsec_params:
@@ -71,10 +71,7 @@ def get_coord(xte, yte, parsec_params, x_arr=None):
 
     if x_arr is None:  # if x_arr is not provided
         npts = 161
-        # Using cosine spacing to concentrate points near TE and LE,
-        # see http://airfoiltools.com/airfoil/naca4digit
-        x_arr = (1 + np.cos(np.linspace(0, 2*np.pi, npts))) / 2
-        # Take TE x-position into account
+        x_arr = (1 + np.cos(np.linspace(0, 2*np.pi, npts))) / 2  # cosine spacing
         x_arr *= xte
 
     xle = 0.0  # Assuming leading edge is at x,y=0,0
@@ -83,13 +80,11 @@ def get_coord(xte, yte, parsec_params, x_arr=None):
     np.isclose(xte, x_arr[-1], rtol=tol, atol=tol)
     np.isclose(xte, x_arr[0], rtol=tol, atol=tol)
 
-    # Evaluate suction (upper) surface coefficients
     coef_suc = get_coef(xte, yte, parsec_params["rle"],
                         parsec_params["x_suc"], parsec_params["y_suc"],
                         parsec_params["d2ydx2_suc"], parsec_params["th_suc"],
                         'suction')
 
-    # Evaluate pressure (lower) surface coefficients
     coef_pre = get_coef(xte, yte, parsec_params["rle"],
                         parsec_params["x_pre"], parsec_params["y_pre"],
                         parsec_params["d2ydx2_pre"], parsec_params["th_pre"],
@@ -98,7 +93,7 @@ def get_coord(xte, yte, parsec_params, x_arr=None):
     j_le = np.argmin(x_arr)
     xy_suc = eval_coord_from_coef(x_arr[:j_le], coef_suc)
     xy_pre = eval_coord_from_coef(x_arr[j_le:], coef_pre)
-    # indexing here avoids repeating the leading egde point
+    # indexing here avoids repeating the leading edge point
 
     xy_arr = np.concatenate((xy_suc, xy_pre), axis=0)
 
@@ -237,7 +232,6 @@ def main():
     # airfoil inversion
     airfoilname_inverse = f"{airfoilname}_parsec"
 
-    # TE & LE of airfoil
     # xte, yte = 1.0, 0.0  # normalized to chord = 1
     xte, yte = 0.5 * (xy_ref[0, :] + xy_ref[-1, :])
 
@@ -272,7 +266,7 @@ def main():
     var_init = [val for val in parsec_params_init.values()]  # assuming dictionary follows the order of key addition
 
     # plot initial guess of airfoil
-    xy_coords_init = get_coord(xte, yte, parsec_params_init)  # TODO: fix upper & lower x
+    xy_coords_init = get_coord(xte, yte, parsec_params_init)
 
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111)
